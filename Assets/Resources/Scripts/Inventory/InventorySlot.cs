@@ -3,6 +3,8 @@ public class InventorySlot
 {
     public bool isLocked;
 
-    public string itemId;
+    public ItemDefinition itemSlot;
     public int quantity;
+
+    public int slotsNumber;
 }

@@ -17,5 +17,5 @@ MonoBehaviour:
   type: 4
   maxStack: 1
   weight: 10
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 8aea1d6d199da3c43aa4797c5982503e, type: 3}
   defense: 10
