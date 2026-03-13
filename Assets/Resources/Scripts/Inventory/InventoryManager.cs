@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using Zenject;
 
@@ -9,13 +10,30 @@ public class InventoryManager : MonoBehaviour
     private InventoryModel _inventory = new InventoryModel();
     public Action inventoryChanged;
 
+    // Путь к файлу сохранения
+    private string SavePath => Path.Combine(Application.persistentDataPath, "inventory_save.json");
+
     [Inject]
     public void Initialize(GameConfig config)
     {
         _config = config;
-        CreateInventory();
-        _inventory.coins = _config.initialCoins;
-        _inventory.totalWeight = 0; // Изначально вес 0
+
+        // ЗАГРУЗКА ИЛИ СОЗДАНИЕ
+        if (File.Exists(SavePath))
+        {
+            LoadInventory();
+            Debug.Log("<color=green>Inventory Loaded from File!</color>");
+        }
+        else
+        {
+            CreateInventory();
+            _inventory.coins = _config.initialCoins;
+            _inventory.totalWeight = 0;
+            SaveInventory();
+        }
+
+        // АВТО-СОХРАНЕНИЕ: подписываемся на каждое изменение
+        inventoryChanged += SaveInventory;
 
         Debug.Log($"<color=green>Inventory Initialized!</color> Coins: {_inventory.coins}, Slots: {_inventory.slots.Count}");
         inventoryChanged?.Invoke();
@@ -32,6 +50,39 @@ public class InventoryManager : MonoBehaviour
             slot.itemSlot = null;
             slot.quantity = 0;
             _inventory.slots.Add(slot);
+        }
+    }
+
+    // --- МЕТОДЫ СОХРАНЕНИЯ ---
+    public void SaveInventory()
+    {
+        string json = JsonUtility.ToJson(_inventory, true);
+        File.WriteAllText(SavePath, json);
+    }
+
+    private void LoadInventory()
+    {
+        string json = File.ReadAllText(SavePath);
+        _inventory = JsonUtility.FromJson<InventoryModel>(json);
+
+        // Восстановление ссылок на ScriptableObjects
+        foreach (var slot in _inventory.slots)
+        {
+            if (slot.itemSlot != null)
+            {
+                // Ищем по имени в папке Assets/Resources/Items/
+                slot.itemSlot = Resources.Load<ItemDefinition>("Items/" + slot.itemSlot.name);
+            }
+        }
+    }
+
+    public void DeleteSaveData()
+    {
+        if (File.Exists(SavePath))
+        {
+            File.Delete(SavePath);
+            Debug.Log("<color=red>Save Deleted!</color> Restarting scene...");
+            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
         }
     }
 
@@ -93,7 +144,6 @@ public class InventoryManager : MonoBehaviour
         if (changed)
         {
             _inventory.totalWeight += totalAdded * def.weight;
-
             Debug.Log($"<color=cyan>Item Added:</color> {def.name} x{totalAdded}. Total Weight: {_inventory.totalWeight:F2}");
             inventoryChanged?.Invoke();
         }
@@ -121,10 +171,7 @@ public class InventoryManager : MonoBehaviour
 
         _inventory.totalWeight -= actualRemoved * s.itemSlot.weight;
 
-        if (_inventory.totalWeight < 0.0001f)
-        {
-            _inventory.totalWeight = 0f;
-        }
+        if (_inventory.totalWeight < 0.0001f) _inventory.totalWeight = 0f;
 
         s.quantity -= actualRemoved;
         bool isCleared = s.quantity <= 0;
