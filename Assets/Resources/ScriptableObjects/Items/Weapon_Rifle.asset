@@ -19,3 +19,4 @@ MonoBehaviour:
   weight: 5
   icon: {fileID: 21300000, guid: 4d2e2cdde8ae6ae42966a85676ea4e92, type: 3}
   damage: 20
+  ammosType: 1

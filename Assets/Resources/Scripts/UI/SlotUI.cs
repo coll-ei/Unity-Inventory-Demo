@@ -1,5 +1,7 @@
+using Unity.VisualScripting.FullSerializer;
 using UnityEngine;
 using UnityEngine.UI;
+using Zenject;
 
 public class SlotUI : MonoBehaviour
 {
@@ -9,7 +11,15 @@ public class SlotUI : MonoBehaviour
     [SerializeField] private GameObject _lockOverlay;
 
     private int _slotIndex;
+    private InventoryManager _inventory;
+    private GameConfig _config;
 
+    [Inject]
+    public void Initialize(GameConfig config, InventoryManager inventory)
+    {
+        _config = config;
+        _inventory = inventory;
+    }
     public void Setup(int slotIndex)
     {
         _slotIndex = slotIndex;
@@ -33,9 +43,9 @@ public class SlotUI : MonoBehaviour
             if (_lockOverlay != null) _lockOverlay.SetActive(true);
             if (_slotName != null) _slotName.text = "Closed";
             if (_quantityText != null)
-                _quantityText.text = $"Cost: {GameManager.instance.config.unlockPrice}";
+                _quantityText.text = $"Cost: {_config.unlockPrice}";
 
-            Debug.Log($"Slot {slot.slotsNumber} is locked");
+            //Debug.Log($"Slot {slot.slotsNumber} is locked");
             return;
         }
 
@@ -44,7 +54,7 @@ public class SlotUI : MonoBehaviour
             if (_slotName != null) _slotName.text = "Empty";
             if (_quantityText != null) _quantityText.text = "";
 
-            Debug.Log($"Slot {slot.slotsNumber} is empty");
+            //Debug.Log($"Slot {slot.slotsNumber} is empty");
             return;
         }
 
@@ -65,6 +75,11 @@ public class SlotUI : MonoBehaviour
                 _quantityText.text = "";
         }
 
-        Debug.Log($"Slot {slot.slotsNumber} updated: {slot.itemSlot.itemName}");
+        //Debug.Log($"Slot {slot.slotsNumber} updated: {slot.itemSlot.itemName}");
+    }
+
+    public void Unlock()
+    {
+        _inventory.UnlockSlot(_slotIndex);
     }
 }

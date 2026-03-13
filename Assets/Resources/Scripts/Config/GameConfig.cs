@@ -11,4 +11,5 @@ public class GameConfig : ScriptableObject
     [Header("Gameplay")]
     public int initialCoins = 200;
     public int defaultAmmoAdd = 30;
+    public int defaultCoinsAdd = 50;
 }
