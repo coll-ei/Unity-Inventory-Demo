@@ -2,7 +2,7 @@
 Unity inventory system prototype with stackable items, unlockable slots and save and load functionality
 
 Техно-стек:
-Unity 2022.3.62f1.
+Unity 2022.3.62f1(Portrait mode).
 Zenject (Dependency Injection) - для слабой связанности компонентов.
 JSON Serialization - сохранение данных в Application.persistentDataPath.
 ScriptableObjects - для конфигурации предметов и баланса.
@@ -35,4 +35,4 @@ LINQ - для эффективного поиска и фильтрации пр
 2)Убедиться, что в SceneContext прокинуты ссылки на GameConfig и ItemDatabase.
 3)Все сообщения о действиях (выстрел, добавление, ошибки) выводятся в Console с цветовой разметкой.
 
- 
+На выполнение задания ушло около 8 часов чистого времени.
