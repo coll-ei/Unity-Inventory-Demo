@@ -12,14 +12,31 @@ public class SlotUI : MonoBehaviour
 
     private int _slotIndex;
     private InventoryManager _inventory;
-    private GameConfig _config;
+    private GameConfig _config; 
+    private PopUpPanel _popUp;
+
 
     [Inject]
-    public void Initialize(GameConfig config, InventoryManager inventory)
+    public void Initialize(GameConfig config, InventoryManager inventory, PopUpPanel popUp)
     {
         _config = config;
         _inventory = inventory;
+        _popUp = popUp;
     }
+
+
+    public void OnSlotClick()
+    {
+        var model = _inventory.GetModel();
+        var slot = model.slots[_slotIndex];
+
+        if (slot.itemSlot != null && !slot.isLocked)
+        {
+            _popUp.ShowTable(slot.itemSlot);
+        }
+    }
+
+
     public void Setup(int slotIndex)
     {
         _slotIndex = slotIndex;
