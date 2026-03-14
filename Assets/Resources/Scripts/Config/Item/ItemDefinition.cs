@@ -1,17 +1,14 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Inventory/Item")]
-
-public class ItemDefinition : ScriptableObject
+public abstract class ItemDefinition : ScriptableObject
 {
-    public string id;
+    [Header("Identity")]
+    public string id; 
     public string itemName;
     public ItemType type;
 
+    [Header("Stats")]
     public int maxStack = 1;
     public float weight;
-
     public Sprite icon;
-
 }
-

@@ -1,24 +1,27 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using UnityEngine;
 using Zenject;
+
 
 public class InventoryManager : MonoBehaviour
 {
     private GameConfig _config;
+    private ItemDatabase _database;
     private InventoryModel _inventory = new InventoryModel();
+
     public Action inventoryChanged;
 
-    // Путь к файлу сохранения
     private string SavePath => Path.Combine(Application.persistentDataPath, "inventory_save.json");
 
     [Inject]
-    public void Initialize(GameConfig config)
+    public void Initialize(GameConfig config, ItemDatabase database)
     {
         _config = config;
+        _database = database;
 
-        // ЗАГРУЗКА ИЛИ СОЗДАНИЕ
         if (File.Exists(SavePath))
         {
             LoadInventory();
@@ -26,36 +29,237 @@ public class InventoryManager : MonoBehaviour
         }
         else
         {
-            CreateInventory();
+            CreateInitialInventory();
             _inventory.coins = _config.initialCoins;
-            _inventory.totalWeight = 0;
             SaveInventory();
         }
 
-        // АВТО-СОХРАНЕНИЕ: подписываемся на каждое изменение
         inventoryChanged += SaveInventory;
 
         Debug.Log($"<color=green>Inventory Initialized!</color> Coins: {_inventory.coins}, Slots: {_inventory.slots.Count}");
         inventoryChanged?.Invoke();
     }
 
-    private void CreateInventory()
+
+    private void CreateInitialInventory()
     {
+        if (_inventory == null) _inventory = new InventoryModel();
+
+        if (_inventory.slots == null) _inventory.slots = new List<InventorySlot>();
+
         _inventory.slots.Clear();
+
         for (int i = 0; i < _config.maxSlots; i++)
         {
-            InventorySlot slot = new InventorySlot();
-            slot.isLocked = i >= _config.defaultUnlocked;
-            slot.slotsNumber = i;
-            slot.itemSlot = null;
-            slot.quantity = 0;
-            _inventory.slots.Add(slot);
+            _inventory.slots.Add(new InventorySlot
+            {
+                isLocked = i >= _config.defaultUnlocked,
+                slotsNumber = i,
+                itemSlot = null,
+                quantity = 0
+            });
         }
     }
 
-    // --- МЕТОДЫ СОХРАНЕНИЯ ---
+
+    public bool AddItem(ItemDefinition def, int amount = 1)
+    {
+        if (def == null || amount <= 0) return false;
+
+        int remaining = amount;
+        bool changed = false;
+        List<int> affectedSlots = new List<int>();
+
+        if (def.maxStack > 1)
+        {
+            foreach (var s in _inventory.slots.Where(s => !s.isLocked && s.itemSlot == def && s.quantity < def.maxStack))
+            {
+                int added = Mathf.Min(def.maxStack - s.quantity, remaining);
+                s.quantity += added;
+                remaining -= added;
+                changed = true;
+                if (!affectedSlots.Contains(s.slotsNumber)) affectedSlots.Add(s.slotsNumber);
+                if (remaining <= 0) break;
+            }
+        }
+
+        while (remaining > 0)
+        {
+            var emptySlot = _inventory.slots.FirstOrDefault(s => !s.isLocked && s.itemSlot == null);
+            if (emptySlot == null) break;
+
+            int added = Mathf.Min(def.maxStack, remaining);
+            emptySlot.itemSlot = def;
+            emptySlot.quantity = added;
+            remaining -= added;
+            changed = true;
+            affectedSlots.Add(emptySlot.slotsNumber);
+        }
+
+        if (changed)
+        {
+            string slotsInfo = string.Join(", ", affectedSlots);
+            Debug.Log($"<color=cyan>Item Added:</color> {def.itemName} x{amount - remaining} into slots [{slotsInfo}]. Total Weight: {_inventory.TotalWeight:F2}");
+            inventoryChanged?.Invoke();
+            return true;
+        }
+
+        Debug.LogWarning("<color=red>Error:</color> No free slots available!");
+        return false;
+    }
+
+
+    public void SwapSlots(int fromIndex, int toIndex)
+    {
+        if (fromIndex == toIndex) return;
+
+        var slotFrom = _inventory.slots[fromIndex];
+        var slotTo = _inventory.slots[toIndex];
+
+        if (slotFrom.isLocked || slotTo.isLocked) return;
+        if (slotFrom.itemSlot == null) return; 
+
+        if (slotTo.itemSlot != null && slotTo.itemSlot == slotFrom.itemSlot && slotTo.itemSlot.maxStack > 1)
+        {
+            int canAdd = slotTo.itemSlot.maxStack - slotTo.quantity;
+            int toAdd = Mathf.Min(canAdd, slotFrom.quantity);
+
+            slotTo.quantity += toAdd;
+            slotFrom.quantity -= toAdd;
+
+            if (slotFrom.quantity <= 0) slotFrom.itemSlot = null;
+        }
+        else 
+        {
+            var tempItem = slotTo.itemSlot;
+            int tempQty = slotTo.quantity;
+
+            slotTo.itemSlot = slotFrom.itemSlot;
+            slotTo.quantity = slotFrom.quantity;
+
+            slotFrom.itemSlot = tempItem;
+            slotFrom.quantity = tempQty;
+        }
+
+        inventoryChanged?.Invoke();
+    }
+
+
+
+    public void TryShoot()
+    {
+        var weapons = _inventory.slots
+            .Where(s => s.itemSlot is WeaponItem)
+            .Select(s => s.itemSlot as WeaponItem)
+            .ToList();
+
+        var ammoSlots = _inventory.slots
+            .Where(s => s.itemSlot is AmmoDefinition && s.quantity > 0)
+            .ToList();
+
+        if (!ammoSlots.Any()) { Debug.LogError("<color=red>Shoot Error:</color> No ammo in inventory!"); return; }
+        if (!weapons.Any()) { Debug.LogError("<color=red>Shoot Error:</color> No weapons in inventory!"); return; }
+
+        var randomAmmoSlot = ammoSlots[UnityEngine.Random.Range(0, ammoSlots.Count)];
+        var ammoDef = randomAmmoSlot.itemSlot as AmmoDefinition;
+
+        var weapon = weapons.FirstOrDefault(w => w.ammosType == ammoDef.type);
+
+        if (weapon != null)
+        {
+            randomAmmoSlot.quantity--;
+            if (randomAmmoSlot.quantity <= 0) randomAmmoSlot.itemSlot = null;
+
+            Debug.Log($"<color=orange>SHOT!</color> Weapon: {weapon.itemName} | Ammo: {ammoDef.itemName} | Damage: {weapon.damage}");
+            inventoryChanged?.Invoke();
+        }
+        else
+        {
+            Debug.LogError($"<color=red>Shoot Error:</color> No weapon found for {ammoDef.itemName}!");
+        }
+    }
+
+
+    public void RemoveFromSlot(int index, int qty = -1)
+    {
+        if (index < 0 || index >= _inventory.slots.Count) return;
+        var slot = _inventory.slots[index];
+
+        if (slot.itemSlot == null) return;
+
+        if (qty == -1 || qty >= slot.quantity)
+        {
+            slot.itemSlot = null;
+            slot.quantity = 0;
+        }
+        else
+        {
+            slot.quantity -= qty;
+        }
+
+        inventoryChanged?.Invoke();
+    }
+
+    public void RemoveRandomItem()
+    {
+        var busySlots = _inventory.slots.Where(s => s.itemSlot != null).ToList();
+        if (!busySlots.Any())
+        {
+            Debug.LogError("<color=red>Error:</color> All slots are empty!");
+            return;
+        }
+
+        var randomSlot = busySlots[UnityEngine.Random.Range(0, busySlots.Count)];
+        string removedName = randomSlot.itemSlot.itemName;
+        int removedIndex = randomSlot.slotsNumber;
+
+        randomSlot.itemSlot = null;
+        randomSlot.quantity = 0;
+
+        Debug.Log($"<color=orange>Removed:</color> {removedName} from slot {removedIndex}");
+        inventoryChanged?.Invoke();
+    }
+
+
+
+    public void UnlockSlot(int index)
+    {
+        if (index < 0 || index >= _inventory.slots.Count) return;
+        var slot = _inventory.slots[index];
+
+        if (slot.isLocked && _inventory.coins >= _config.unlockPrice)
+        {
+            _inventory.coins -= _config.unlockPrice;
+            slot.isLocked = false;
+            Debug.Log($"<color=yellow>Slot {index} Unlocked!</color> Remaining coins: {_inventory.coins}");
+            inventoryChanged?.Invoke();
+        }
+        else if (_inventory.coins < _config.unlockPrice)
+        {
+            Debug.LogWarning("<color=red>Error:</color> Not enough coins!");
+        }
+    }
+
+
+
+    public void AddCoins()
+    {
+        _inventory.coins += _config.defaultCoinsAdd;
+        Debug.Log($"<color=yellow>Coins Added:</color> +{_config.defaultCoinsAdd}. Total: {_inventory.coins}");
+        inventoryChanged?.Invoke();
+    }
+
+    public InventoryModel GetModel() => _inventory;
+
+
+
     public void SaveInventory()
     {
+        foreach (var slot in _inventory.slots)
+        {
+            slot.itemId = slot.itemSlot != null ? slot.itemSlot.id : "";
+        }
+
         string json = JsonUtility.ToJson(_inventory, true);
         File.WriteAllText(SavePath, json);
     }
@@ -65,155 +269,29 @@ public class InventoryManager : MonoBehaviour
         string json = File.ReadAllText(SavePath);
         _inventory = JsonUtility.FromJson<InventoryModel>(json);
 
-        // Восстановление ссылок на ScriptableObjects
         foreach (var slot in _inventory.slots)
         {
-            if (slot.itemSlot != null)
+            if (!string.IsNullOrEmpty(slot.itemId))
             {
-                // Ищем по имени в папке Assets/Resources/Items/
-                slot.itemSlot = Resources.Load<ItemDefinition>("Items/" + slot.itemSlot.name);
+                slot.itemSlot = _database.GetItemById(slot.itemId);
             }
         }
     }
 
     public void DeleteSaveData()
     {
+        inventoryChanged -= SaveInventory;
+
         if (File.Exists(SavePath))
         {
             File.Delete(SavePath);
-            Debug.Log("<color=red>Save Deleted!</color> Restarting scene...");
-            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
-        }
-    }
-
-    public InventoryModel GetModel() => _inventory;
-
-    public bool AddItem(ItemDefinition def, int amount = 1)
-    {
-        if (def == null || amount <= 0) return false;
-
-        bool changed = false;
-        int totalAdded = 0;
-
-        if (def.maxStack <= 1)
-        {
-            for (int i = 0; i < _inventory.slots.Count; i++)
-            {
-                var s = _inventory.slots[i];
-                if (!s.isLocked && s.itemSlot == null)
-                {
-                    s.itemSlot = def;
-                    s.quantity = 1;
-                    totalAdded = 1;
-                    changed = true;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            int remaining = amount;
-            for (int i = 0; i < _inventory.slots.Count && remaining > 0; i++)
-            {
-                var s = _inventory.slots[i];
-                if (!s.isLocked && s.itemSlot == def && s.quantity < def.maxStack)
-                {
-                    int canAdd = def.maxStack - s.quantity;
-                    int added = Mathf.Min(canAdd, remaining);
-                    s.quantity += added;
-                    remaining -= added;
-                    totalAdded += added;
-                    changed = true;
-                }
-            }
-            for (int i = 0; i < _inventory.slots.Count && remaining > 0; i++)
-            {
-                var s = _inventory.slots[i];
-                if (!s.isLocked && s.itemSlot == null)
-                {
-                    int added = Mathf.Min(def.maxStack, remaining);
-                    s.itemSlot = def;
-                    s.quantity = added;
-                    remaining -= added;
-                    totalAdded += added;
-                    changed = true;
-                }
-            }
+            Debug.Log("<color=red>Save File Deleted!</color>");
         }
 
-        if (changed)
-        {
-            _inventory.totalWeight += totalAdded * def.weight;
-            Debug.Log($"<color=cyan>Item Added:</color> {def.name} x{totalAdded}. Total Weight: {_inventory.totalWeight:F2}");
-            inventoryChanged?.Invoke();
-        }
-        else
-        {
-            Debug.LogWarning($"<color=red>Failed to add {def.name}!</color> No free slots or inventory full.");
-        }
+        CreateInitialInventory();
 
-        return changed;
-    }
+        if (_config != null) _inventory.coins = _config.initialCoins;
 
-    public bool RemoveFromSlot(int slotIndex, int qty = 1)
-    {
-        if (slotIndex < 0 || slotIndex >= _inventory.slots.Count) return false;
-        var s = _inventory.slots[slotIndex];
-
-        if (s.itemSlot == null)
-        {
-            Debug.LogWarning($"Slot {slotIndex} is already empty.");
-            return false;
-        }
-
-        string itemName = s.itemSlot.name;
-        int actualRemoved = Mathf.Min(qty, s.quantity);
-
-        _inventory.totalWeight -= actualRemoved * s.itemSlot.weight;
-
-        if (_inventory.totalWeight < 0.0001f) _inventory.totalWeight = 0f;
-
-        s.quantity -= actualRemoved;
-        bool isCleared = s.quantity <= 0;
-
-        if (isCleared)
-        {
-            s.itemSlot = null;
-            s.quantity = 0;
-        }
-
-        Debug.Log($"<color=orange>Item Removed:</color> {itemName} x{actualRemoved} from slot {slotIndex}. Total Weight: {_inventory.totalWeight:F2}");
-        if (isCleared) Debug.Log($"Slot {slotIndex} is now completely empty.");
-
-        inventoryChanged?.Invoke();
-        return true;
-    }
-
-    public bool UnlockSlot(int slotIndex)
-    {
-        if (slotIndex < 0 || slotIndex >= _inventory.slots.Count) return false;
-        var s = _inventory.slots[slotIndex];
-
-        if (!s.isLocked) return false;
-
-        if (_inventory.coins >= _config.unlockPrice)
-        {
-            _inventory.coins -= _config.unlockPrice;
-            s.isLocked = false;
-
-            Debug.Log($"<color=yellow>Slot Unlocked!</color> Index: {slotIndex}. Spent: {_config.unlockPrice}. Remaining: {_inventory.coins}");
-            inventoryChanged?.Invoke();
-            return true;
-        }
-
-        Debug.LogWarning($"Not enough coins to unlock slot {slotIndex}!");
-        return false;
-    }
-
-    public void AddCoins()
-    {
-        _inventory.coins += _config.defaultCoinsAdd;
-        Debug.Log($"<color=yellow>Coins Added:</color> +{_config.defaultCoinsAdd}. Total: {_inventory.coins}");
         inventoryChanged?.Invoke();
     }
 }

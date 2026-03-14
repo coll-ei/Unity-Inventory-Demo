@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b19c339d22e285c43aedb4ea31e43fd2, type: 3}
   m_Name: Ammo_Pistol
   m_EditorClassIdentifier: 
-  id: 1
+  id: pistol_ammo
   itemName: Pistols ammo
   type: 0
   maxStack: 50

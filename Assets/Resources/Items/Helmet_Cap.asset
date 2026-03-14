@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 729ca4fbfbfa43c429c52b850aafec42, type: 3}
   m_Name: Helmet_Cap
   m_EditorClassIdentifier: 
-  id: 5
+  id: helmet_cap
   itemName: Cap
   type: 5
   maxStack: 1

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Inventory/GameConfig")]
+[CreateAssetMenu(menuName = "Config/GameConfig")]
 public class GameConfig : ScriptableObject
 {
     [Header("Inventory")]

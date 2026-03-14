@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 729ca4fbfbfa43c429c52b850aafec42, type: 3}
   m_Name: Helmet_Helm
   m_EditorClassIdentifier: 
-  id: 6
+  id: helmet_helm
   itemName: Helm
   type: 5
   maxStack: 1

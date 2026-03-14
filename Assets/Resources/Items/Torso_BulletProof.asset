@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 729ca4fbfbfa43c429c52b850aafec42, type: 3}
   m_Name: Torso_BulletProof
   m_EditorClassIdentifier: 
-  id: 8
+  id: torso_bulletproof
   itemName: BulletProof Vest
   type: 4
   maxStack: 1
