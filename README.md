@@ -1,38 +1,37 @@
 # Unity-Inventory-Demo
-Unity inventory system prototype with stackable items, unlockable slots and save and load functionality
+A Unity inventory system prototype featuring stackable items, unlockable slots, and save/load functionality.
 
-Техно-стек:
-Unity 2022.3.62f1(Portrait mode).
-Zenject (Dependency Injection) - для слабой связанности компонентов.
-JSON Serialization - сохранение данных в Application.persistentDataPath.
-ScriptableObjects - для конфигурации предметов и баланса.
-LINQ - для эффективного поиска и фильтрации предметов.
+## Tech Stack
+* **Unity 2022.3.62f1**: configured for Portrait mode.
+* **Zenject (Dependency Injection)**: ensures loose coupling between components.
+* **JSON Serialization**: handles data saving to `Application.persistentDataPath`.
+* **ScriptableObjects**: manages item configurations and game balance.
+* **LINQ**: powers efficient item searching and filtering.
 
-Что реализовано:
-1)Все параметры предметов (вес, урон, иконки) хранятся в SO. Удобно править баланс без захода в код.
-2)Система сохранения: Реализована через уникальный String Id предмета и ItemDatabase, благодаря этому сохранения не поламаются при переименовании файлов в проекте
-3)Система общего веса инвентаря и объектов. Общий вес инвентаря вычисляется динамически через LINQ
-4)Drag and Drop System:
- 1)Перенос на пустые ячейки
- 2)Обьеденение стаковаемых предметов
- 3)Обмен и удаление предметов
-5)PopUp c информацией о предмете
-6)Кнопки взаимодействия с инвентарем.
- 1)Выстрел
- 2)Удалить случайный предмет
- 3)Добавить случайный предмет
- 4)Добавить каждый тип патронов, в размере который указан в конфиге
- 5)Удалить сохранения
- 6)Добавить монеты, в размере который указан в конфиге
- 7)Разблокировка слотов, за монеты
+## Features
+* **SO-Based Balancing**: All item parameters (weight, damage, icons) are stored in ScriptableObjects, allowing balance tweaks without touching code.
+* **Robust Save System**: Uses unique string IDs and an `ItemDatabase` to prevent save corruption if project files are renamed.
+* **Dynamic Weight Calculation**: Total inventory and object weight is calculated on the fly using LINQ.
+* **Drag and Drop System**:
+  * Drag to empty slots
+  * Merge stackable items
+  * Swap item positions
+  * Delete items via drag
+* **Item Info PopUp**: Displays detailed statistics when inspecting an item.
+* **Inventory Control Buttons**:
+  * **Shoot**: Simulates weapon firing and ammo consumption.
+  * **Remove Random Item**: Deletes a random item from the grid.
+  * **Add Random Item**: Spawns a random item into an available slot.
+  * **Add All Ammo Types**: Grants each ammo type in amounts defined by the config.
+  * **Delete Saves**: Clears persistent save data.
+  * **Add Coins**: Grants a configurable amount of currency.
+  * **Unlock Slots**: Expands inventory capacity using coins.
  
-Взаимодействие:
-Можно создать свой тип предмета и сразу его загрузить в игру, посредством добавление его в ItemDatabase. Для создание предметов(ПКМ-Create-Inventory-любой предмет на выбор).
-Можно создать свои игровые настройки(Стартовые монеты, цена разблокировки, количество общих и доступных ячеек и другие).
+## Extensibility & Customization
+* **Custom Items**: Create new items instantly via the Unity Editor (`Right Click -> Create -> Inventory -> Choose Item Type`) and add them to the `ItemDatabase` to load them into the game.
+* **Game Balance**: Modify core settings (starting coins, slot unlock costs, total/available slot counts, and more) directly through the configuration files.
 
-Как запустить:
-1)Открыть сцену MainScene.
-2)Убедиться, что в SceneContext прокинуты ссылки на GameConfig и ItemDatabase.
-3)Все сообщения о действиях (выстрел, добавление, ошибки) выводятся в Console с цветовой разметкой.
-
-На выполнение задания ушло около 8 часов чистого времени.
+## How to Run
+1. Open the `MainScene` scene.
+2. Ensure that references to `GameConfig` and `ItemDatabase` are properly assigned in the `SceneContext`.
+3. Run the game. All action logs (shooting, adding items, errors) will be displayed in the Console with color-coded formatting.
