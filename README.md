@@ -26,6 +26,12 @@ A Unity inventory system prototype featuring stackable items, unlockable slots, 
   * **Delete Saves**: Clears persistent save data.
   * **Add Coins**: Grants a configurable amount of currency.
   * **Unlock Slots**: Expands inventory capacity using coins.
+
+
+  <img width="497" height="596" alt="image" src="https://github.com/user-attachments/assets/cdf579e9-ba42-4e51-b03a-db5efc0f495f" />
+  <img width="543" height="603" alt="image" src="https://github.com/user-attachments/assets/ef4f0bc9-f2c4-4635-a846-b0341a9ecec8" />
+  <img width="493" height="600" alt="image" src="https://github.com/user-attachments/assets/6652dcf2-fb80-4821-91c7-377429cbee01" />
+
  
 ## Extensibility & Customization
 * **Custom Items**: Create new items instantly via the Unity Editor (`Right Click -> Create -> Inventory -> Choose Item Type`) and add them to the `ItemDatabase` to load them into the game.
